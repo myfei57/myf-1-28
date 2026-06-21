@@ -10,6 +10,7 @@ import type {
   RepairRecord,
   AssemblyPlan,
   GameConfig,
+  PartSourceInfo,
 } from '../types';
 import {
   DEFAULT_CONFIG,
@@ -228,7 +229,15 @@ export const useGameStore = create<Store>()(
           state.addMaterials(rewards.materials);
 
           if (mission.rewards.blindBox) {
-            const bonusParts = state.openBlindBox(mission.rewards.blindBox, true);
+            const missionSource: PartSourceInfo = {
+              type: 'mission',
+              missionName: mission.name,
+            };
+            const bonusParts = state.openBlindBox(
+              mission.rewards.blindBox,
+              true,
+              missionSource
+            );
             bonusParts.forEach((p) => state.addPart(p));
           }
         }
@@ -265,7 +274,7 @@ export const useGameStore = create<Store>()(
         return generateRandomPart(state.config, minRarity);
       },
 
-      openBlindBox: (type, free = false) => {
+      openBlindBox: (type, free = false, sourceOverride) => {
         const state = get();
         const price = BLIND_BOX_PRICES[type];
 
@@ -273,11 +282,18 @@ export const useGameStore = create<Store>()(
           return [];
         }
 
+        const source: PartSourceInfo =
+          sourceOverride || {
+            type: 'blindbox',
+            blindBoxType: type,
+            openedAt: Date.now(),
+          };
+
         const parts: Part[] = [];
         const count = type === 'legendary' ? 5 : type === 'epic' ? 4 : type === 'rare' ? 3 : 2;
 
         for (let i = 0; i < count; i++) {
-          const part = generateRandomPart(state.config, type);
+          const part = generateRandomPart(state.config, type, source);
           parts.push(part);
         }
 
@@ -300,6 +316,18 @@ export const useGameStore = create<Store>()(
     }),
     {
       name: 'robot-workshop-storage',
+      version: 1,
+      migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as { parts?: Part[] } & Record<string, unknown>;
+        if (version < 1 && Array.isArray(state.parts)) {
+          state.parts = state.parts.map((p) =>
+            p && p.source && p.source.type
+              ? p
+              : { ...p, source: { type: 'unknown' as const } }
+          );
+        }
+        return state;
+      },
       partialize: (state) => ({
         parts: state.parts,
         robots: state.robots,

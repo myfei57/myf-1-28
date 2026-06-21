@@ -10,10 +10,19 @@ import {
   Gauge,
   Layers,
   Heart,
+  Box,
+  Target,
+  HelpCircle,
 } from 'lucide-react';
-import type { Part, PartType } from '../types';
+import type { Part, PartType, PartSource } from '../types';
 import { useGameStore } from '../store/useGameStore';
-import { getRarityBorderClass, getRarityColorClass } from '../utils/helpers';
+import {
+  getRarityBorderClass,
+  getRarityColorClass,
+  getPartSource,
+  getPartSourceColorClass,
+  getPartSourceDetail,
+} from '../utils/helpers';
 import { PART_TYPE_NAMES } from '../data/defaultConfig';
 
 const PartIcon: Record<PartType, typeof Cpu> = {
@@ -23,6 +32,12 @@ const PartIcon: Record<PartType, typeof Cpu> = {
   leg: Footprints,
   core: Zap,
   tool: Wrench,
+};
+
+const SourceIcon: Record<PartSource, typeof Box> = {
+  blindbox: Box,
+  mission: Target,
+  unknown: HelpCircle,
 };
 
 interface PartCardProps {
@@ -54,6 +69,10 @@ export function PartCard({
   const Icon = PartIcon[part.type];
   const rarityBorder = getRarityBorderClass(part.rarity);
   const rarityColor = getRarityColorClass(part.rarity);
+  const sourceInfo = getPartSource(part);
+  const SourceBadgeIcon = SourceIcon[sourceInfo.type];
+  const sourceColor = getPartSourceColorClass(sourceInfo.type);
+  const sourceDetail = getPartSourceDetail(part, config);
 
   const sizeClasses = {
     xs: 'p-1.5',
@@ -121,14 +140,21 @@ export function PartCard({
           )}
 
           {size !== 'xs' && size !== 'sm' && (
-            <p className="text-xs text-white/50 mb-2">
-              {PART_TYPE_NAMES[part.type]}
+            <div className="flex items-center gap-2 flex-wrap mb-2 text-xs text-white/50">
+              <span>{PART_TYPE_NAMES[part.type]}</span>
               {part.setBonus && (
-                <span className="ml-2 text-neon-purple">
+                <span className="text-neon-purple">
                   [套装: {config.setBonuses[part.setBonus]?.name}]
                 </span>
               )}
-            </p>
+              <span
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-background-tertiary ${sourceColor}`}
+                title={sourceDetail}
+              >
+                <SourceBadgeIcon className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate max-w-[120px]">{sourceDetail}</span>
+              </span>
+            </div>
           )}
 
           {showStats && size !== 'sm' && size !== 'xs' && (

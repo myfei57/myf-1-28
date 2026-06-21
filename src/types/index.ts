@@ -4,6 +4,15 @@ export type PartType = 'head' | 'body' | 'arm' | 'leg' | 'core' | 'tool';
 
 export type MissionType = 'transport' | 'cleaning' | 'rescue' | 'combat';
 
+export type PartSource = 'blindbox' | 'mission' | 'unknown';
+
+export interface PartSourceInfo {
+  type: PartSource;
+  blindBoxType?: Rarity;
+  openedAt?: number;
+  missionName?: string;
+}
+
 export interface Part {
   id: string;
   name: string;
@@ -18,6 +27,7 @@ export interface Part {
   maxDurability: number;
   description: string;
   icon: string;
+  source?: PartSourceInfo;
 }
 
 export interface Robot {
@@ -181,7 +191,7 @@ export interface GameActions {
   };
   calculateAdaptability: (robot: Robot, mission: Mission) => number;
   generateRandomPart: (minRarity?: Rarity) => Part;
-  openBlindBox: (type: Rarity, free?: boolean) => Part[];
+  openBlindBox: (type: Rarity, free?: boolean, source?: PartSourceInfo) => Part[];
   loadFromStorage: () => void;
   resetGame: () => void;
 }

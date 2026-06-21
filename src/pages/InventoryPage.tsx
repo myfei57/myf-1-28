@@ -6,13 +6,19 @@ import { PartCard } from '../components/PartCard';
 import { Modal } from '../components/Modal';
 import { useGameStore } from '../store/useGameStore';
 import { PART_TYPE_NAMES } from '../data/defaultConfig';
-import type { Part, PartType, Rarity } from '../types';
-import { getRarityColorClass } from '../utils/helpers';
+import type { Part, PartType, Rarity, PartSource } from '../types';
+import {
+  getRarityColorClass,
+  getPartSourceType,
+  getPartSourceColorClass,
+  PART_SOURCE_NAMES,
+} from '../utils/helpers';
 
 export function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<PartType | 'all'>('all');
   const [filterRarity, setFilterRarity] = useState<Rarity | 'all'>('all');
+  const [filterSource, setFilterSource] = useState<PartSource | 'all'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'weight' | 'energy' | 'rarity'>('rarity');
   const [editingPart, setEditingPart] = useState<Part | null>(null);
   const [showRecycleConfirm, setShowRecycleConfirm] = useState<string | null>(null);
@@ -41,6 +47,10 @@ export function InventoryPage() {
       result = result.filter((p) => p.rarity === filterRarity);
     }
 
+    if (filterSource !== 'all') {
+      result = result.filter((p) => getPartSourceType(p) === filterSource);
+    }
+
     const rarityOrder: Rarity[] = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
     result.sort((a, b) => {
       switch (sortBy) {
@@ -58,7 +68,7 @@ export function InventoryPage() {
     });
 
     return result;
-  }, [parts, searchTerm, filterType, filterRarity, sortBy]);
+  }, [parts, searchTerm, filterType, filterRarity, filterSource, sortBy]);
 
   const handleEditSave = () => {
     if (editingPart) {
@@ -88,6 +98,18 @@ export function InventoryPage() {
     };
     parts.forEach((p) => {
       stats[p.rarity]++;
+    });
+    return stats;
+  }, [parts]);
+
+  const sourceStats = useMemo(() => {
+    const stats: Record<PartSource, number> = {
+      blindbox: 0,
+      mission: 0,
+      unknown: 0,
+    };
+    parts.forEach((p) => {
+      stats[getPartSourceType(p)]++;
     });
     return stats;
   }, [parts]);
@@ -139,6 +161,19 @@ export function InventoryPage() {
             </select>
 
             <select
+              value={filterSource}
+              onChange={(e) => setFilterSource(e.target.value as PartSource | 'all')}
+              className="input max-w-[150px]"
+            >
+              <option value="all">全部来源</option>
+              {(['blindbox', 'mission', 'unknown'] as PartSource[]).map((key) => (
+                <option key={key} value={key}>
+                  {PART_SOURCE_NAMES[key]} ({sourceStats[key]})
+                </option>
+              ))}
+            </select>
+
+            <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
               className="input max-w-[150px]"
@@ -160,6 +195,20 @@ export function InventoryPage() {
             >
               <span className="font-mono font-bold">{rarityStats[key as Rarity]}</span>
               <span>{value.name}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2 mt-2">
+          {(['blindbox', 'mission', 'unknown'] as PartSource[]).map((key) => (
+            <div
+              key={key}
+              className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-background-tertiary ${getPartSourceColorClass(
+                key
+              )}`}
+            >
+              <span className="font-mono font-bold">{sourceStats[key]}</span>
+              <span>{PART_SOURCE_NAMES[key]}</span>
             </div>
           ))}
         </div>

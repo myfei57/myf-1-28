@@ -6,6 +6,8 @@ import type {
   Robot,
   Mission,
   GameConfig,
+  PartSource,
+  PartSourceInfo,
 } from '../types';
 import { PART_TEMPLATES } from '../data/defaultConfig';
 
@@ -49,7 +51,11 @@ export function getRarityMultiplier(rarity: Rarity): number {
   return multipliers[rarity];
 }
 
-export function generateRandomPart(config: GameConfig, minRarity?: Rarity): Part {
+export function generateRandomPart(
+  config: GameConfig,
+  minRarity?: Rarity,
+  source: PartSourceInfo = { type: 'unknown' }
+): Part {
   const type = PART_TYPES[Math.floor(Math.random() * PART_TYPES.length)];
   const rarity = getRandomRarity(config, minRarity);
   const multiplier = getRarityMultiplier(rarity);
@@ -84,6 +90,7 @@ export function generateRandomPart(config: GameConfig, minRarity?: Rarity): Part
     maxDurability: Math.floor(baseDurability * multiplier),
     description: template.description,
     icon: type,
+    source,
   };
 }
 
@@ -250,4 +257,42 @@ export function getRarityBorderClass(rarity: Rarity): string {
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+export const PART_SOURCE_NAMES: Record<PartSource, string> = {
+  blindbox: '盲盒',
+  mission: '任务',
+  unknown: '未知来源',
+};
+
+export function getPartSource(part: Part): PartSourceInfo {
+  return part.source && part.source.type ? part.source : { type: 'unknown' };
+}
+
+export function getPartSourceType(part: Part): PartSource {
+  return getPartSource(part).type;
+}
+
+export function getPartSourceColorClass(source: PartSource): string {
+  const classes: Record<PartSource, string> = {
+    blindbox: 'text-neon-purple',
+    mission: 'text-neon-blue',
+    unknown: 'text-white/40',
+  };
+  return classes[source];
+}
+
+export function getPartSourceDetail(part: Part, config: GameConfig): string {
+  const source = getPartSource(part);
+  if (source.type === 'blindbox') {
+    const boxName = source.blindBoxType
+      ? config.rarities[source.blindBoxType]?.name ?? ''
+      : '';
+    const time = source.openedAt ? ` ${formatDate(source.openedAt)}` : '';
+    return `${PART_SOURCE_NAMES.blindbox}·${boxName}${time}`;
+  }
+  if (source.type === 'mission') {
+    return `${PART_SOURCE_NAMES.mission}·${source.missionName ?? ''}`;
+  }
+  return PART_SOURCE_NAMES.unknown;
 }
